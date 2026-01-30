@@ -48,9 +48,19 @@ const DEFAULT_SETTINGS: TournamentSettings = {
   pointsForWin: 3,
   pointsForDraw: 1,
   pointsForLoss: 0,
-  numberOfTables: 4,
+  numberOfTables: 5,
   matchDurationMinutes: 30,
   startTime: '09:00',
+}
+
+// Génère 10 équipes par défaut
+function generateDefaultTeams(): Team[] {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: uuidv4(),
+    name: `Équipe ${i + 1}`,
+    player1: `Joueur ${i * 2 + 1}`,
+    player2: `Joueur ${i * 2 + 2}`,
+  }))
 }
 
 export const useTournamentStore = create<TournamentStore>((set, get) => ({
@@ -61,13 +71,14 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   createTournament: (name: string) => {
     const id = uuidv4()
     const now = new Date().toISOString()
+    const defaultTeams = generateDefaultTeams()
     const tournament: Tournament = {
       id,
       name,
       createdAt: now,
       updatedAt: now,
-      teams: [],
-      pools: [{ id: uuidv4(), name: 'Poule Principale', teamIds: [] }],
+      teams: defaultTeams,
+      pools: [{ id: uuidv4(), name: 'Poule Principale', teamIds: defaultTeams.map(t => t.id) }],
       poolMatches: [],
       finalMatches: [],
       status: 'setup',

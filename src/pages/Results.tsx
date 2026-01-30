@@ -233,6 +233,7 @@ export default function Results() {
                   const team2 = getTeamById(match.team2Id)
                   const team1Wins = match.scoreTeam1! > match.scoreTeam2!
                   const phaseLabel = {
+                    pool: 'Poule',
                     quarterfinal: 'Quart',
                     semifinal: 'Demi',
                     final: 'Finale',

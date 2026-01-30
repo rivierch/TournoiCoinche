@@ -229,7 +229,7 @@ export default function Setup() {
             </h2>
             <TeamForm
               team={editingTeam}
-              onSubmit={editingTeam ? handleUpdateTeam : handleAddTeam}
+              onSubmit={editingTeam ? (team: Team | Omit<Team, 'id'>) => handleUpdateTeam(team as Team) : handleAddTeam}
               onCancel={editingTeam ? () => setEditingTeam(null) : undefined}
             />
           </div>

@@ -1,3 +1,5 @@
 dist-electron/
 electron/
 node_modules/
+release/
+dist/

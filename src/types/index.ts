@@ -1,5 +1,17 @@
 // Types pour l'application de tournoi de coinche
 
+// Déclaration pour l'API Electron (optionnelle en mode web)
+declare global {
+  interface Window {
+    electronAPI?: {
+      store: {
+        get: (key: string) => Promise<unknown>
+        set: (key: string, value: unknown) => Promise<void>
+      }
+    }
+  }
+}
+
 export interface Player {
   name: string
 }

@@ -13,9 +13,6 @@ export function generateBracket(qualifiedTeams: Team[]): Match[] {
   const bracketSize = getNextPowerOfTwo(numTeams)
   const matches: Match[] = []
 
-  // Nombre de byes nécessaires
-  const numByes = bracketSize - numTeams
-
   // Réorganiser les équipes pour le seeding (1 vs dernier, 2 vs avant-dernier, etc.)
   const seededTeams = seedTeams(qualifiedTeams)
 

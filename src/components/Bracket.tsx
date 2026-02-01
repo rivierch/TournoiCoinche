@@ -149,12 +149,20 @@ function BracketMatch({ match, team1, team2, onScoreUpdate, isFinal = false }: B
     }
   }
 
+  const handleCardClick = () => {
+    if (canEdit && !isEditing) {
+      startEditing()
+    }
+  }
+
   return (
     <div
+      onClick={canEdit && !isEditing ? handleCardClick : undefined}
       className={`
-        w-56 rounded-lg border-2 overflow-hidden
+        w-56 rounded-lg border-2 overflow-hidden transition-all
         ${isFinal ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white'}
         ${isComplete ? 'shadow-md' : ''}
+        ${canEdit && !isEditing ? 'cursor-pointer hover:shadow-lg hover:border-primary-300' : ''}
       `}
     >
       {isFinal && (
@@ -182,6 +190,7 @@ function BracketMatch({ match, team1, team2, onScoreUpdate, isFinal = false }: B
             min={0}
             value={score1}
             onChange={(e) => setScore1(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             className="w-12 px-1 py-0.5 text-center text-sm font-bold border border-gray-300 rounded"
             autoFocus
           />
@@ -211,6 +220,7 @@ function BracketMatch({ match, team1, team2, onScoreUpdate, isFinal = false }: B
             min={0}
             value={score2}
             onChange={(e) => setScore2(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             className="w-12 px-1 py-0.5 text-center text-sm font-bold border border-gray-300 rounded"
           />
         ) : (
@@ -220,32 +230,23 @@ function BracketMatch({ match, team1, team2, onScoreUpdate, isFinal = false }: B
         )}
       </div>
 
-      {/* Actions */}
-      {canEdit && (
+      {/* Actions - uniquement en mode édition */}
+      {canEdit && isEditing && (
         <div className="p-1 bg-gray-50 border-t">
-          {isEditing ? (
-            <div className="flex gap-1">
-              <button
-                onClick={handleSave}
-                className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                OK
-              </button>
-              <button
-                onClick={handleCancel}
-                className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
+          <div className="flex gap-1">
             <button
-              onClick={startEditing}
-              className="w-full px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+              onClick={(e) => { e.stopPropagation(); handleSave(); }}
+              className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
             >
-              {isComplete ? 'Modifier' : 'Score'}
+              OK
             </button>
-          )}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+              className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>

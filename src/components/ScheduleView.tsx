@@ -135,11 +135,19 @@ function TableMatchCard({ match, team1, team2, onScoreUpdate }: TableMatchCardPr
     setIsEditing(true)
   }
 
+  const handleCardClick = () => {
+    if (!isEditing) {
+      startEditing()
+    }
+  }
+
   return (
     <div
+      onClick={!isEditing ? handleCardClick : undefined}
       className={`
-        border rounded-lg overflow-hidden
+        border rounded-lg overflow-hidden transition-all
         ${isComplete ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'}
+        ${!isEditing ? 'cursor-pointer hover:shadow-md hover:border-primary-300' : ''}
       `}
     >
       {/* En-tête avec numéro de table */}
@@ -164,6 +172,7 @@ function TableMatchCard({ match, team1, team2, onScoreUpdate }: TableMatchCardPr
               min={0}
               value={score1}
               onChange={(e) => setScore1(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="w-14 px-2 py-0.5 text-center text-sm border border-gray-300 rounded"
               autoFocus
             />
@@ -183,7 +192,7 @@ function TableMatchCard({ match, team1, team2, onScoreUpdate }: TableMatchCardPr
         <div className="text-center text-xs text-gray-400 my-1">vs</div>
 
         {/* Équipe 2 */}
-        <div className={`flex items-center justify-between mb-3 ${team2Wins ? 'font-semibold' : ''}`}>
+        <div className={`flex items-center justify-between ${team2Wins ? 'font-semibold' : ''} ${isEditing ? 'mb-3' : ''}`}>
           <div className="flex-1 truncate text-sm">
             {team2?.name || 'Équipe ?'}
           </div>
@@ -193,6 +202,7 @@ function TableMatchCard({ match, team1, team2, onScoreUpdate }: TableMatchCardPr
               min={0}
               value={score2}
               onChange={(e) => setScore2(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="w-14 px-2 py-0.5 text-center text-sm border border-gray-300 rounded"
             />
           ) : (
@@ -207,35 +217,22 @@ function TableMatchCard({ match, team1, team2, onScoreUpdate }: TableMatchCardPr
           )}
         </div>
 
-        {/* Actions */}
-        {isEditing ? (
+        {/* Actions - uniquement en mode édition */}
+        {isEditing && (
           <div className="flex gap-1">
             <button
-              onClick={handleSave}
+              onClick={(e) => { e.stopPropagation(); handleSave(); }}
               className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
             >
               Valider
             </button>
             <button
-              onClick={handleCancel}
+              onClick={(e) => { e.stopPropagation(); handleCancel(); }}
               className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
             >
               ✕
             </button>
           </div>
-        ) : (
-          <button
-            onClick={startEditing}
-            className={`
-              w-full px-2 py-1 text-xs rounded transition-colors
-              ${isComplete
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }
-            `}
-          >
-            {isComplete ? 'Modifier' : 'Saisir score'}
-          </button>
         )}
       </div>
     </div>

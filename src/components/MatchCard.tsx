@@ -55,8 +55,17 @@ export default function MatchCard({
     }
   }
 
+  const handleCardClick = () => {
+    if (!readonly && !isEditing) {
+      startEditing()
+    }
+  }
+
   return (
-    <div className={`card-container ${isComplete ? 'border-l-4 border-green-500' : ''}`}>
+    <div
+      onClick={!readonly && !isEditing ? handleCardClick : undefined}
+      className={`card-container ${isComplete ? 'border-l-4 border-green-500' : ''} ${!readonly && !isEditing ? 'cursor-pointer hover:shadow-md hover:border-primary-300 transition-all' : ''}`}
+    >
       <div className="flex items-center justify-between mb-2">
         {matchNumber && (
           <div className="text-xs text-gray-400">Match #{matchNumber}</div>
@@ -92,6 +101,7 @@ export default function MatchCard({
               min={0}
               value={score1}
               onChange={(e) => setScore1(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="w-20 px-2 py-1 text-center text-lg font-bold border border-gray-300 rounded"
               autoFocus
             />
@@ -129,6 +139,7 @@ export default function MatchCard({
               min={0}
               value={score2}
               onChange={(e) => setScore2(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="w-20 px-2 py-1 text-center text-lg font-bold border border-gray-300 rounded"
             />
           ) : (
@@ -143,26 +154,17 @@ export default function MatchCard({
         </div>
       </div>
 
-      {/* Actions */}
-      {!readonly && (
+      {/* Actions - uniquement en mode édition */}
+      {!readonly && isEditing && (
         <div className="mt-4 pt-3 border-t border-gray-100">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="btn-success flex-1 text-sm py-1">
-                Valider
-              </button>
-              <button onClick={handleCancel} className="btn-secondary text-sm py-1">
-                Annuler
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={startEditing}
-              className="w-full btn-secondary text-sm py-1"
-            >
-              {isComplete ? 'Modifier le score' : 'Saisir le score'}
+          <div className="flex gap-2">
+            <button onClick={(e) => { e.stopPropagation(); handleSave(); }} className="btn-success flex-1 text-sm py-1">
+              Valider
             </button>
-          )}
+            <button onClick={(e) => { e.stopPropagation(); handleCancel(); }} className="btn-secondary text-sm py-1">
+              Annuler
+            </button>
+          </div>
         </div>
       )}
     </div>

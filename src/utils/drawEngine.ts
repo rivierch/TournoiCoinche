@@ -79,7 +79,8 @@ export function generatePoolMatches(
 }
 
 /**
- * Algorithme de backtracking pour remplir les créneaux de manière optimale
+ * Algorithme optimisé pour remplir les créneaux en maximisant l'utilisation des tables
+ * Priorité : remplir toutes les tables disponibles à chaque créneau
  */
 function backtrackSchedule(
   teamIds: string[],
@@ -112,115 +113,93 @@ function backtrackSchedule(
     return t1 < t2 ? `${t1}-${t2}` : `${t2}-${t1}`
   }
 
-  // Fonction de backtracking récursive
-  function backtrack(slotIndex: number): boolean {
-    // Si on a traité tous les créneaux, vérifier si la solution est valide
-    if (slotIndex >= numberOfSlots) {
-      // Vérifier que toutes les équipes ont joué le nombre requis de matchs (ou proche)
-      const minMatches = Math.min(...Object.values(matchCount))
-      return minMatches >= matchesPerTeam - 1 // Tolérance de 1 match
-    }
-
-    // Essayer de remplir ce créneau au maximum
-    const filled = fillSlot(slotIndex)
+  // Fonction pour calculer le score de priorité d'un match
+  // Plus le score est bas, plus le match est prioritaire
+  const getMatchPriority = (t1: string, t2: string): number => {
+    const count1 = matchCount[t1] || 0
+    const count2 = matchCount[t2] || 0
     
-    if (filled) {
-      // Continuer avec le créneau suivant
-      if (backtrack(slotIndex + 1)) {
-        return true
+    // Priorité aux équipes qui n'ont pas encore atteint leur quota
+    const underQuota1 = count1 < matchesPerTeam ? 0 : 100
+    const underQuota2 = count2 < matchesPerTeam ? 0 : 100
+    
+    // Score combiné : favorise les équipes qui ont le moins joué
+    return underQuota1 + underQuota2 + count1 + count2
+  }
+
+  // Remplir chaque créneau en maximisant l'utilisation des tables
+  for (let slot = 0; slot < numberOfSlots; slot++) {
+    // Continuer tant qu'on peut ajouter des matchs dans ce créneau
+    let canAddMore = true
+    
+    while (canAddMore && matchesInSlot[slot] < maxMatchesPerSlot) {
+      canAddMore = false
+      
+      // Trouver le meilleur match disponible pour ce créneau
+      let bestMatch: [string, string] | null = null
+      let bestPriority = Infinity
+      
+      for (const [t1, t2] of possibleMatches) {
+        const key = matchKey(t1, t2)
+        
+        // Vérifier que le match n'est pas déjà utilisé
+        if (usedMatches.has(key)) continue
+        
+        // Vérifier que les deux équipes sont disponibles dans ce créneau
+        if (busyTeamsBySlot[slot].has(t1) || busyTeamsBySlot[slot].has(t2)) continue
+        
+        // Calculer la priorité de ce match
+        const priority = getMatchPriority(t1, t2)
+        
+        if (priority < bestPriority) {
+          bestPriority = priority
+          bestMatch = [t1, t2]
+        }
+      }
+      
+      // Si on a trouvé un match, l'ajouter
+      if (bestMatch) {
+        const [t1, t2] = bestMatch
+        const key = matchKey(t1, t2)
+        
+        schedule.push({ team1Id: t1, team2Id: t2, slot })
+        usedMatches.add(key)
+        busyTeamsBySlot[slot].add(t1)
+        busyTeamsBySlot[slot].add(t2)
+        matchCount[t1]++
+        matchCount[t2]++
+        matchesInSlot[slot]++
+        canAddMore = true
       }
     }
-
-    return filled
   }
 
-  // Fonction pour remplir un créneau avec le maximum de matchs
-  function fillSlot(slotIndex: number): boolean {
-    // Trouver tous les matchs possibles pour ce créneau
-    const availableMatches: Array<[string, string]> = []
-    
-    for (const [t1, t2] of possibleMatches) {
-      const key = matchKey(t1, t2)
-      
-      // Vérifier que le match n'est pas déjà utilisé
-      if (usedMatches.has(key)) continue
-      
-      // Vérifier que les deux équipes sont disponibles dans ce créneau
-      if (busyTeamsBySlot[slotIndex].has(t1) || busyTeamsBySlot[slotIndex].has(t2)) continue
-      
-      // Vérifier que les équipes n'ont pas déjà atteint leur quota
-      if (matchCount[t1] >= matchesPerTeam && matchCount[t2] >= matchesPerTeam) continue
-      
-      availableMatches.push([t1, t2])
-    }
-
-    // Trier les matchs disponibles en priorisant les équipes qui ont le moins joué
-    availableMatches.sort((a, b) => {
-      const scoreA = matchCount[a[0]] + matchCount[a[1]]
-      const scoreB = matchCount[b[0]] + matchCount[b[1]]
-      return scoreA - scoreB
-    })
-
-    // Essayer de remplir le créneau avec le backtracking
-    return fillSlotRecursive(slotIndex, availableMatches, 0)
-  }
-
-  // Backtracking pour remplir un créneau spécifique
-  function fillSlotRecursive(
-    slotIndex: number,
-    availableMatches: Array<[string, string]>,
-    startIndex: number
-  ): boolean {
-    // Si le créneau est plein, succès
-    if (matchesInSlot[slotIndex] >= maxMatchesPerSlot) {
-      return true
-    }
-
-    // Essayer d'ajouter des matchs
-    for (let i = startIndex; i < availableMatches.length; i++) {
-      const [t1, t2] = availableMatches[i]
-      const key = matchKey(t1, t2)
-
-      // Vérifier à nouveau la disponibilité (peut avoir changé pendant le backtracking)
-      if (usedMatches.has(key)) continue
-      if (busyTeamsBySlot[slotIndex].has(t1) || busyTeamsBySlot[slotIndex].has(t2)) continue
-
-      // Ajouter le match
-      schedule.push({ team1Id: t1, team2Id: t2, slot: slotIndex })
-      usedMatches.add(key)
-      busyTeamsBySlot[slotIndex].add(t1)
-      busyTeamsBySlot[slotIndex].add(t2)
-      matchCount[t1]++
-      matchCount[t2]++
-      matchesInSlot[slotIndex]++
-
-      // Continuer récursivement
-      if (fillSlotRecursive(slotIndex, availableMatches, i + 1)) {
-        return true
-      }
-
-      // Backtrack si nécessaire - on garde quand même le match si on ne peut pas faire mieux
-    }
-
-    // On a ajouté autant de matchs que possible
-    return true
-  }
-
-  // Lancer le backtracking
-  backtrack(0)
-
-  // Si certains créneaux ne sont pas complètement remplis, essayer d'ajouter des matchs supplémentaires
-  // en permettant aux équipes de jouer plus que matchesPerTeam
+  // Deuxième passe : si des créneaux ne sont pas remplis et qu'il reste des matchs possibles,
+  // essayer d'ajouter des matchs supplémentaires (même si les équipes ont déjà leur quota)
+  // Cela garantit une utilisation maximale des tables
   for (let slot = 0; slot < numberOfSlots; slot++) {
     while (matchesInSlot[slot] < maxMatchesPerSlot) {
       let added = false
+      let bestMatch: [string, string] | null = null
+      let bestPriority = Infinity
       
       for (const [t1, t2] of possibleMatches) {
         const key = matchKey(t1, t2)
         if (usedMatches.has(key)) continue
         if (busyTeamsBySlot[slot].has(t1) || busyTeamsBySlot[slot].has(t2)) continue
-
-        // Ajouter le match même si les équipes ont déjà leur quota
+        
+        // Priorité aux équipes qui ont le moins joué
+        const priority = (matchCount[t1] || 0) + (matchCount[t2] || 0)
+        if (priority < bestPriority) {
+          bestPriority = priority
+          bestMatch = [t1, t2]
+        }
+      }
+      
+      if (bestMatch) {
+        const [t1, t2] = bestMatch
+        const key = matchKey(t1, t2)
+        
         schedule.push({ team1Id: t1, team2Id: t2, slot })
         usedMatches.add(key)
         busyTeamsBySlot[slot].add(t1)
@@ -229,10 +208,68 @@ function backtrackSchedule(
         matchCount[t2]++
         matchesInSlot[slot]++
         added = true
-        break
       }
 
       if (!added) break
+    }
+  }
+
+  // Troisième passe : s'il reste des équipes qui n'ont pas assez joué,
+  // ajouter des créneaux supplémentaires si nécessaire
+  const teamsNeedingMatches = teamIds.filter(id => matchCount[id] < matchesPerTeam)
+  
+  if (teamsNeedingMatches.length > 0) {
+    let extraSlot = numberOfSlots
+    let attempts = 0
+    const maxExtraSlots = 10 // Limite de sécurité
+    
+    while (teamsNeedingMatches.some(id => matchCount[id] < matchesPerTeam) && attempts < maxExtraSlots) {
+      busyTeamsBySlot.push(new Set())
+      matchesInSlot.push(0)
+      
+      let addedInSlot = false
+      
+      while (matchesInSlot[extraSlot] < maxMatchesPerSlot) {
+        let bestMatch: [string, string] | null = null
+        let bestPriority = Infinity
+        
+        for (const [t1, t2] of possibleMatches) {
+          const key = matchKey(t1, t2)
+          if (usedMatches.has(key)) continue
+          if (busyTeamsBySlot[extraSlot].has(t1) || busyTeamsBySlot[extraSlot].has(t2)) continue
+          
+          // Forte priorité aux équipes qui n'ont pas atteint leur quota
+          const need1 = matchCount[t1] < matchesPerTeam ? -1000 : 0
+          const need2 = matchCount[t2] < matchesPerTeam ? -1000 : 0
+          const priority = need1 + need2 + matchCount[t1] + matchCount[t2]
+          
+          if (priority < bestPriority) {
+            bestPriority = priority
+            bestMatch = [t1, t2]
+          }
+        }
+        
+        if (bestMatch) {
+          const [t1, t2] = bestMatch
+          const key = matchKey(t1, t2)
+          
+          schedule.push({ team1Id: t1, team2Id: t2, slot: extraSlot })
+          usedMatches.add(key)
+          busyTeamsBySlot[extraSlot].add(t1)
+          busyTeamsBySlot[extraSlot].add(t2)
+          matchCount[t1]++
+          matchCount[t2]++
+          matchesInSlot[extraSlot]++
+          addedInSlot = true
+        } else {
+          break
+        }
+      }
+      
+      if (!addedInSlot) break
+      
+      extraSlot++
+      attempts++
     }
   }
 

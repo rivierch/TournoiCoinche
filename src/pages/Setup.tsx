@@ -79,7 +79,18 @@ export default function Setup() {
     navigate(`/pool/${tournament.id}`)
   }
 
+  const handleContinueTournament = () => {
+    if (tournament.status === 'pool_phase') {
+      navigate(`/pool/${tournament.id}`)
+    } else if (tournament.status === 'final_phase') {
+      navigate(`/final/${tournament.id}`)
+    } else if (tournament.status === 'completed') {
+      navigate(`/results/${tournament.id}`)
+    }
+  }
+
   const canStart = tournament.teams.length >= 2
+  const isStarted = tournament.status !== 'setup'
 
   return (
     <div className="min-h-screen p-8">
@@ -97,16 +108,37 @@ export default function Setup() {
               Retour
             </button>
             <h1 className="text-3xl font-bold text-white">{tournament.name}</h1>
-            <p className="text-green-200">Configuration du tournoi</p>
+            <p className="text-green-200">
+              Configuration du tournoi
+              {isStarted && (
+                <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">
+                  {tournament.status === 'pool_phase' && 'En cours - Poules'}
+                  {tournament.status === 'final_phase' && 'En cours - Finales'}
+                  {tournament.status === 'completed' && 'Terminé'}
+                </span>
+              )}
+            </p>
           </div>
-          <button
-            onClick={handleStartTournament}
-            disabled={!canStart}
-            className={`btn-success text-lg px-6 py-3 ${!canStart ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            Démarrer le tournoi
-            <span className="ml-2">→</span>
-          </button>
+          {isStarted ? (
+            <button
+              onClick={handleContinueTournament}
+              className="btn-success text-lg px-6 py-3"
+            >
+              {tournament.status === 'pool_phase' && 'Retourner à la phase de poules'}
+              {tournament.status === 'final_phase' && 'Retourner à la phase finale'}
+              {tournament.status === 'completed' && 'Voir les résultats'}
+              <span className="ml-2">→</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleStartTournament}
+              disabled={!canStart}
+              className={`btn-success text-lg px-6 py-3 ${!canStart ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              Démarrer le tournoi
+              <span className="ml-2">→</span>
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -257,9 +289,21 @@ export default function Setup() {
         </div>
 
         {/* Message d'aide */}
-        {tournament.teams.length < 2 && (
+        {!isStarted && tournament.teams.length < 2 && (
           <div className="mt-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg text-yellow-800">
             <p className="font-medium">💡 Ajoutez au moins 2 équipes pour pouvoir démarrer le tournoi</p>
+          </div>
+        )}
+
+        {/* Avertissement tournoi en cours */}
+        {isStarted && (
+          <div className="mt-6 p-4 bg-blue-100 border border-blue-300 rounded-lg text-blue-800">
+            <p className="font-medium">
+              ℹ️ Ce tournoi est en cours ({tournament.status === 'pool_phase' ? 'phase de poules' : tournament.status === 'final_phase' ? 'phase finale' : 'terminé'})
+            </p>
+            <p className="text-sm mt-1">
+              Les modifications apportées ici n'affecteront pas les matchs déjà joués.
+            </p>
           </div>
         )}
       </div>

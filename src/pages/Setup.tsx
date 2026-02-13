@@ -162,18 +162,32 @@ export default function Setup() {
                 </p>
               </div>
 
-              <div>
-                <label className="label">Équipes qualifiées pour la finale</label>
-                <select
-                  value={tournament.settings.teamsQualifiedForFinals}
-                  onChange={(e) => updateTournamentSettings({ teamsQualifiedForFinals: parseInt(e.target.value) })}
-                  className="input-field"
-                >
-                  <option value={2}>2 (finale directe)</option>
-                  <option value={4}>4 (demi-finales)</option>
-                  <option value={8}>8 (quarts de finale)</option>
-                </select>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="noFinalPhase"
+                  checked={Boolean(tournament.settings.noFinalPhase)}
+                  onChange={(e) => updateTournamentSettings({ noFinalPhase: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="noFinalPhase" className="label cursor-pointer">
+                  Pas de phase finale (uniquement matchs à la mêlée)
+                </label>
               </div>
+              {!tournament.settings.noFinalPhase && (
+                <div>
+                  <label className="label">Équipes qualifiées pour la finale</label>
+                  <select
+                    value={tournament.settings.teamsQualifiedForFinals}
+                    onChange={(e) => updateTournamentSettings({ teamsQualifiedForFinals: parseInt(e.target.value) })}
+                    className="input-field"
+                  >
+                    <option value={2}>2 (finale directe)</option>
+                    <option value={4}>4 (demi-finales)</option>
+                    <option value={8}>8 (quarts de finale)</option>
+                  </select>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-medium text-gray-700 mb-2">Organisation des tables</h3>

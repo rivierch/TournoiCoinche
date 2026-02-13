@@ -53,7 +53,10 @@ export default function Results() {
     tournament.settings
   )
 
-  const bracketResults = getBracketResults(tournament.finalMatches, tournament.teams)
+  const hasFinalPhase = tournament.finalMatches.length > 0
+  const bracketResults = hasFinalPhase
+    ? getBracketResults(tournament.finalMatches, tournament.teams)
+    : { winner: null, runnerUp: null, thirdPlace: null }
   const stats = getTournamentStats([...tournament.poolMatches, ...tournament.finalMatches])
 
   const getTeamById = (teamId: string) => {
@@ -80,66 +83,68 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Podium */}
-        <div className="card-container mb-8">
-          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">🏆 Podium 🏆</h2>
-          
-          <div className="flex justify-center items-end gap-4 mb-8">
-            {/* 2ème place */}
-            <div className="text-center">
-              <div className="w-32 bg-gray-300 rounded-t-lg p-4" style={{ height: '120px' }}>
-                <div className="text-4xl mb-2">🥈</div>
-                <div className="font-bold text-gray-700">2ème</div>
-              </div>
-              <div className="bg-gray-200 p-3 rounded-b-lg">
-                <div className="font-semibold text-gray-800">
-                  {bracketResults.runnerUp?.name || '-'}
+        {/* Podium (masqué si pas de phase finale) */}
+        {hasFinalPhase && (
+          <div className="card-container mb-8">
+            <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">🏆 Podium 🏆</h2>
+            
+            <div className="flex justify-center items-end gap-4 mb-8">
+              {/* 2ème place */}
+              <div className="text-center">
+                <div className="w-32 bg-gray-300 rounded-t-lg p-4" style={{ height: '120px' }}>
+                  <div className="text-4xl mb-2">🥈</div>
+                  <div className="font-bold text-gray-700">2ème</div>
                 </div>
-                {bracketResults.runnerUp && (
-                  <div className="text-xs text-gray-500">
-                    {bracketResults.runnerUp.player1} & {bracketResults.runnerUp.player2}
+                <div className="bg-gray-200 p-3 rounded-b-lg">
+                  <div className="font-semibold text-gray-800">
+                    {bracketResults.runnerUp?.name || '-'}
                   </div>
-                )}
+                  {bracketResults.runnerUp && (
+                    <div className="text-xs text-gray-500">
+                      {bracketResults.runnerUp.player1} & {bracketResults.runnerUp.player2}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* 1ère place */}
-            <div className="text-center">
-              <div className="w-36 bg-yellow-400 rounded-t-lg p-4" style={{ height: '160px' }}>
-                <div className="text-5xl mb-2">🏆</div>
-                <div className="font-bold text-yellow-900">Champion</div>
-              </div>
-              <div className="bg-yellow-300 p-3 rounded-b-lg">
-                <div className="font-bold text-yellow-900 text-lg">
-                  {bracketResults.winner?.name || '-'}
+              {/* 1ère place */}
+              <div className="text-center">
+                <div className="w-36 bg-yellow-400 rounded-t-lg p-4" style={{ height: '160px' }}>
+                  <div className="text-5xl mb-2">🏆</div>
+                  <div className="font-bold text-yellow-900">Champion</div>
                 </div>
-                {bracketResults.winner && (
-                  <div className="text-xs text-yellow-700">
-                    {bracketResults.winner.player1} & {bracketResults.winner.player2}
+                <div className="bg-yellow-300 p-3 rounded-b-lg">
+                  <div className="font-bold text-yellow-900 text-lg">
+                    {bracketResults.winner?.name || '-'}
                   </div>
-                )}
+                  {bracketResults.winner && (
+                    <div className="text-xs text-yellow-700">
+                      {bracketResults.winner.player1} & {bracketResults.winner.player2}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* 3ème place */}
-            <div className="text-center">
-              <div className="w-32 bg-orange-400 rounded-t-lg p-4" style={{ height: '100px' }}>
-                <div className="text-4xl mb-2">🥉</div>
-                <div className="font-bold text-orange-900">3ème</div>
-              </div>
-              <div className="bg-orange-300 p-3 rounded-b-lg">
-                <div className="font-semibold text-orange-900">
-                  {bracketResults.thirdPlace?.name || '-'}
+              {/* 3ème place */}
+              <div className="text-center">
+                <div className="w-32 bg-orange-400 rounded-t-lg p-4" style={{ height: '100px' }}>
+                  <div className="text-4xl mb-2">🥉</div>
+                  <div className="font-bold text-orange-900">3ème</div>
                 </div>
-                {bracketResults.thirdPlace && (
-                  <div className="text-xs text-orange-700">
-                    {bracketResults.thirdPlace.player1} & {bracketResults.thirdPlace.player2}
+                <div className="bg-orange-300 p-3 rounded-b-lg">
+                  <div className="font-semibold text-orange-900">
+                    {bracketResults.thirdPlace?.name || '-'}
                   </div>
-                )}
+                  {bracketResults.thirdPlace && (
+                    <div className="text-xs text-orange-700">
+                      {bracketResults.thirdPlace.player1} & {bracketResults.thirdPlace.player2}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Statistiques */}
@@ -155,9 +160,11 @@ export default function Results() {
             </div>
           </div>
 
-          {/* Classement final des poules */}
+          {/* Classement final des poules (ou classement final si pas de phase finale) */}
           <div className="card-container">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Classement phase de poules</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              {hasFinalPhase ? 'Classement phase de poules' : 'Classement final'}
+            </h2>
             <div className="space-y-2">
               {poolStandings.map((standing, index) => (
                 <div
@@ -222,13 +229,14 @@ export default function Results() {
             </div>
           </div>
 
-          {/* Matchs de phase finale */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Phase finale</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {tournament.finalMatches
-                .filter((m) => m.team1Id && m.team2Id && m.scoreTeam1 !== null)
-                .map((match) => {
+          {/* Matchs de phase finale (masqué si pas de phase finale) */}
+          {hasFinalPhase && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Phase finale</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {tournament.finalMatches
+                  .filter((m) => m.team1Id && m.team2Id && m.scoreTeam1 !== null)
+                  .map((match) => {
                   const team1 = getTeamById(match.team1Id)
                   const team2 = getTeamById(match.team2Id)
                   const team1Wins = match.scoreTeam1! > match.scoreTeam2!
@@ -262,8 +270,9 @@ export default function Results() {
                     </div>
                   )
                 })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Bouton retour */}

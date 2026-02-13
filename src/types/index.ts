@@ -63,6 +63,8 @@ export type TournamentStatus = 'setup' | 'pool_phase' | 'final_phase' | 'complet
 export interface TournamentSettings {
   matchesPerTeam: number
   teamsQualifiedForFinals: number
+  /** Si true, le tournoi se termine après la phase de poules (uniquement matchs à la mêlée) */
+  noFinalPhase?: boolean
   pointsForWin: number
   pointsForDraw: number
   pointsForLoss: number

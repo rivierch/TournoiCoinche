@@ -45,6 +45,7 @@ type TournamentStore = TournamentState & TournamentActions
 const DEFAULT_SETTINGS: TournamentSettings = {
   matchesPerTeam: 3,
   teamsQualifiedForFinals: 4,
+  noFinalPhase: false,
   pointsForWin: 3,
   pointsForDraw: 1,
   pointsForLoss: 0,

@@ -1,4 +1,5 @@
 dist-electron/
+.DS_Store
 electron/
 node_modules/
 release/

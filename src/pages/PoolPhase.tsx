@@ -17,6 +17,7 @@ export default function PoolPhase() {
     isLoaded,
     updateMatchScore,
     startFinalPhase,
+    completeTournament,
   } = useTournamentStore()
 
   const [activeTab, setActiveTab] = useState<'schedule' | 'matches' | 'standings'>('schedule')
@@ -71,6 +72,8 @@ export default function PoolPhase() {
     updateMatchScore(matchId, scoreTeam1, scoreTeam2, 'pool')
   }
 
+  const noFinalPhase = Boolean(tournament.settings.noFinalPhase)
+
   const handleStartFinals = () => {
     if (!canStartFinals) {
       alert('Tous les matchs de poule doivent être terminés')
@@ -78,6 +81,15 @@ export default function PoolPhase() {
     }
     startFinalPhase()
     navigate(`/final/${tournament.id}`)
+  }
+
+  const handleFinishTournament = () => {
+    if (!canStartFinals) {
+      alert('Tous les matchs de poule doivent être terminés')
+      return
+    }
+    completeTournament()
+    navigate(`/results/${tournament.id}`)
   }
 
   const getTeamById = (teamId: string) => {
@@ -90,39 +102,37 @@ export default function PoolPhase() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <div className="flex items-center gap-4 mb-2">
-              <button
-                onClick={() => navigate('/')}
-                className="text-green-200 hover:text-white flex items-center gap-1"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Accueil
-              </button>
-              <span className="text-green-400">|</span>
-              <button
-                onClick={() => navigate(`/setup/${tournament.id}`)}
-                className="text-green-200 hover:text-white flex items-center gap-1"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Configuration
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/')}
+              className="text-green-200 hover:text-white mb-2 flex items-center gap-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Accueil
+            </button>
             <h1 className="text-3xl font-bold text-white">{tournament.name}</h1>
             <p className="text-green-200">Phase de poules</p>
           </div>
-          <button
-            onClick={handleStartFinals}
-            disabled={!canStartFinals}
-            className={`btn-success text-lg px-6 py-3 ${!canStartFinals ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            Passer à la phase finale
-            <span className="ml-2">→</span>
-          </button>
+          {noFinalPhase ? (
+            <button
+              onClick={handleFinishTournament}
+              disabled={!canStartFinals}
+              className={`btn-success text-lg px-6 py-3 ${!canStartFinals ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              Terminer le tournoi
+              <span className="ml-2">🏆</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleStartFinals}
+              disabled={!canStartFinals}
+              className={`btn-success text-lg px-6 py-3 ${!canStartFinals ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              Passer à la phase finale
+              <span className="ml-2">→</span>
+            </button>
+          )}
         </div>
 
         {/* Barre de progression et infos */}
@@ -216,7 +226,7 @@ export default function PoolPhase() {
         {activeTab === 'standings' && (
           <PoolStandings
             standings={standings}
-            qualifiedCount={tournament.settings.teamsQualifiedForFinals}
+            qualifiedCount={noFinalPhase ? 0 : tournament.settings.teamsQualifiedForFinals}
           />
         )}
 
@@ -224,11 +234,15 @@ export default function PoolPhase() {
         {!canStartFinals && (
           <div className="mt-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg text-yellow-800">
             <p className="font-medium">
-              💡 Terminez tous les matchs pour passer à la phase finale
+              {noFinalPhase
+                ? '💡 Terminez tous les matchs pour terminer le tournoi'
+                : '💡 Terminez tous les matchs pour passer à la phase finale'}
             </p>
-            <p className="text-sm mt-1">
-              Les {tournament.settings.teamsQualifiedForFinals} meilleures équipes seront qualifiées
-            </p>
+            {!noFinalPhase && (
+              <p className="text-sm mt-1">
+                Les {tournament.settings.teamsQualifiedForFinals} meilleures équipes seront qualifiées
+              </p>
+            )}
           </div>
         )}
       </div>

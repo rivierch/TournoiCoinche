@@ -90,6 +90,18 @@ export function calculateStandings(
 }
 
 /**
+ * Calcule le nombre réel de matchs programmés par équipe (d'après le tirage)
+ */
+export function getTotalMatchesByTeam(matches: Match[]): Record<string, number> {
+  const count: Record<string, number> = {}
+  matches.forEach((match) => {
+    count[match.team1Id] = (count[match.team1Id] ?? 0) + 1
+    count[match.team2Id] = (count[match.team2Id] ?? 0) + 1
+  })
+  return count
+}
+
+/**
  * Compare deux équipes par leurs confrontations directes
  */
 function compareHeadToHead(team1Id: string, team2Id: string, matches: Match[]): number {

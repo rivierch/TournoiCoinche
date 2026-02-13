@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTournamentStore } from '../store/tournamentStore'
-import { calculateStandings, getTournamentStats } from '../utils/scoreCalculator'
+import { calculateStandings, getTotalMatchesByTeam, getTournamentStats } from '../utils/scoreCalculator'
 import { getBracketResults } from '../utils/bracketGenerator'
 
 export default function Results() {
@@ -52,6 +52,7 @@ export default function Results() {
     tournament.poolMatches,
     tournament.settings
   )
+  const totalMatchesByTeam = getTotalMatchesByTeam(tournament.poolMatches)
 
   const hasFinalPhase = tournament.finalMatches.length > 0
   const bracketResults = hasFinalPhase
@@ -186,7 +187,7 @@ export default function Results() {
                     <span className="font-medium text-gray-700">{standing.team.name}</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {standing.won}V - {standing.drawn}N - {standing.lost}P
+                    {standing.played}/{totalMatchesByTeam[standing.teamId] ?? tournament.settings.matchesPerTeam} matchs — {standing.won}V - {standing.drawn}N - {standing.lost}P
                   </span>
                 </div>
               ))}

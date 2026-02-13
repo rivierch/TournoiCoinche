@@ -3,9 +3,13 @@ import type { TeamStanding } from '../types'
 interface PoolStandingsProps {
   standings: TeamStanding[]
   qualifiedCount?: number
+  /** Nombre total de matchs par équipe (config, même valeur pour toutes les équipes) */
+  matchesPerTeam?: number
+  /** Nombre réel de matchs programmés par équipe (peut varier selon le tirage) */
+  totalMatchesByTeam?: Record<string, number>
 }
 
-export default function PoolStandings({ standings, qualifiedCount = 0 }: PoolStandingsProps) {
+export default function PoolStandings({ standings, qualifiedCount = 0, matchesPerTeam, totalMatchesByTeam }: PoolStandingsProps) {
   return (
     <div className="card-container overflow-x-auto">
       <table className="w-full">
@@ -13,7 +17,9 @@ export default function PoolStandings({ standings, qualifiedCount = 0 }: PoolSta
           <tr className="border-b border-gray-200">
             <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">#</th>
             <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Équipe</th>
-            <th className="text-center py-3 px-2 text-xs font-semibold text-gray-500 uppercase">J</th>
+            <th className="text-center py-3 px-2 text-xs font-semibold text-gray-500 uppercase" title="Joués / Total réel">
+              J / Total
+            </th>
             <th className="text-center py-3 px-2 text-xs font-semibold text-gray-500 uppercase">G</th>
             <th className="text-center py-3 px-2 text-xs font-semibold text-gray-500 uppercase">N</th>
             <th className="text-center py-3 px-2 text-xs font-semibold text-gray-500 uppercase">P</th>
@@ -65,7 +71,12 @@ export default function PoolStandings({ standings, qualifiedCount = 0 }: PoolSta
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-2 text-center text-gray-600">{standing.played}</td>
+                <td className="py-3 px-2 text-center text-gray-600">
+                  {(() => {
+                    const total = totalMatchesByTeam?.[standing.teamId] ?? matchesPerTeam
+                    return total != null ? `${standing.played} / ${total}` : standing.played
+                  })()}
+                </td>
                 <td className="py-3 px-2 text-center text-green-600 font-medium">{standing.won}</td>
                 <td className="py-3 px-2 text-center text-gray-500">{standing.drawn}</td>
                 <td className="py-3 px-2 text-center text-red-600 font-medium">{standing.lost}</td>
@@ -96,7 +107,7 @@ export default function PoolStandings({ standings, qualifiedCount = 0 }: PoolSta
 
       {/* Légende */}
       <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap gap-4">
-        <span><strong>J</strong> = Joués</span>
+        <span><strong>J / Total</strong> = Matchs joués / matchs réels programmés par équipe</span>
         <span><strong>G</strong> = Gagnés</span>
         <span><strong>N</strong> = Nuls</span>
         <span><strong>P</strong> = Perdus</span>

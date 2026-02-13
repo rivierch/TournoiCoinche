@@ -4,7 +4,7 @@ import { useTournamentStore } from '../store/tournamentStore'
 import MatchCard from '../components/MatchCard'
 import PoolStandings from '../components/PoolStandings'
 import ScheduleView from '../components/ScheduleView'
-import { calculateStandings, getPoolProgress, isPoolPhaseComplete } from '../utils/scoreCalculator'
+import { calculateStandings, getPoolProgress, getTotalMatchesByTeam, isPoolPhaseComplete } from '../utils/scoreCalculator'
 import { estimateTournamentDuration } from '../utils/scheduleEngine'
 
 export default function PoolPhase() {
@@ -227,6 +227,8 @@ export default function PoolPhase() {
           <PoolStandings
             standings={standings}
             qualifiedCount={noFinalPhase ? 0 : tournament.settings.teamsQualifiedForFinals}
+            matchesPerTeam={tournament.settings.matchesPerTeam}
+            totalMatchesByTeam={getTotalMatchesByTeam(tournament.poolMatches)}
           />
         )}
 

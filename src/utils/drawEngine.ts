@@ -2,17 +2,9 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Team, Match } from '../types'
 
 /**
- * Type pour représenter un match sélectionné avec son créneau
- */
-type ScheduledMatch = {
-  team1Id: string
-  team2Id: string
-  slot: number
-}
-
-/**
- * Génère les matchs de la phase de poules avec tirage aléatoire
- * Utilise un algorithme de backtracking pour garantir le remplissage optimal des créneaux
+ * Génère les matchs de la phase de poules avec tirage aléatoire.
+ * Phase 1 : choisit exactement les paires (chaque équipe joue matchesPerTeam fois).
+ * Phase 2 : répartit ces matchs dans les créneaux sans qu'une équipe joue deux fois au même créneau.
  */
 export function generatePoolMatches(
   teams: Team[],
@@ -21,53 +13,29 @@ export function generatePoolMatches(
 ): Match[] {
   if (teams.length < 2) return []
 
-  // Créer toutes les combinaisons possibles de matchs
-  const allPossibleMatches: Array<[string, string]> = []
-  for (let i = 0; i < teams.length; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      allPossibleMatches.push([teams[i].id, teams[j].id])
-    }
-  }
-
-  // Mélanger les matchs possibles pour le tirage aléatoire
-  shuffleArray(allPossibleMatches)
-
-  // Calcul du nombre maximum de matchs simultanés possible
+  const teamIds = teams.map((t) => t.id)
+  const totalMatches = (teams.length * matchesPerTeam) / 2
   const maxMatchesPerSlot = Math.min(numberOfTables, Math.floor(teams.length / 2))
-  
-  // Nombre de créneaux
-  const numberOfSlots = matchesPerTeam
 
-  // Utiliser le backtracking pour trouver la meilleure configuration
-  const result = backtrackSchedule(
-    teams.map(t => t.id),
-    allPossibleMatches,
-    numberOfSlots,
-    maxMatchesPerSlot,
-    matchesPerTeam
-  )
+  // Phase 1 : générer exactement totalMatches paires (chaque équipe dans exactement matchesPerTeam matchs)
+  const pairs = pickMatchesWithExactQuota(teamIds, matchesPerTeam, totalMatches)
+  if (pairs.length === 0) return []
+
+  // Phase 2 : assigner chaque match à un créneau (et une table)
+  const schedule = assignMatchesToSlots(pairs, maxMatchesPerSlot)
 
   // Créer les objets Match
-  const matches: Match[] = result.map((scheduled) => ({
+  const matches: Match[] = schedule.map(({ team1Id, team2Id, slot, tableNumber }) => ({
     id: uuidv4(),
-    team1Id: scheduled.team1Id,
-    team2Id: scheduled.team2Id,
+    team1Id,
+    team2Id,
     scoreTeam1: null,
     scoreTeam2: null,
     phase: 'pool' as const,
-    timeSlot: scheduled.slot,
-    tableNumber: 0, // Sera assigné après
+    timeSlot: slot,
+    tableNumber,
   }))
 
-  // Assigner les numéros de table
-  const slotTables: Record<number, number> = {}
-  for (const match of matches) {
-    const slot = match.timeSlot ?? 0
-    slotTables[slot] = (slotTables[slot] || 0) + 1
-    match.tableNumber = slotTables[slot]
-  }
-
-  // Trier par créneau puis par table
   matches.sort((a, b) => {
     if ((a.timeSlot ?? 0) !== (b.timeSlot ?? 0)) {
       return (a.timeSlot ?? 0) - (b.timeSlot ?? 0)
@@ -79,201 +47,78 @@ export function generatePoolMatches(
 }
 
 /**
- * Algorithme optimisé pour remplir les créneaux en maximisant l'utilisation des tables
- * Priorité : remplir toutes les tables disponibles à chaque créneau
+ * Génère un ensemble de paires (t1, t2) tel que chaque équipe apparaît exactement matchesPerTeam fois.
+ * On part de toutes les paires possibles, on mélange, et on accepte une paire si les deux équipes
+ * sont encore sous leur quota, jusqu'à avoir totalMatches paires.
  */
-function backtrackSchedule(
+function pickMatchesWithExactQuota(
   teamIds: string[],
-  possibleMatches: Array<[string, string]>,
-  numberOfSlots: number,
-  maxMatchesPerSlot: number,
-  matchesPerTeam: number
-): ScheduledMatch[] {
-  // État du planning
-  const schedule: ScheduledMatch[] = []
-  
-  // Matchs déjà utilisés (pour éviter les doublons)
-  const usedMatches = new Set<string>()
-  
-  // Compteur de matchs par équipe
-  const matchCount: Record<string, number> = {}
-  teamIds.forEach(id => { matchCount[id] = 0 })
-  
-  // Équipes occupées par créneau
-  const busyTeamsBySlot: Array<Set<string>> = []
-  for (let i = 0; i < numberOfSlots; i++) {
-    busyTeamsBySlot.push(new Set())
+  matchesPerTeam: number,
+  totalMatches: number
+): Array<[string, string]> {
+  const allPairs: Array<[string, string]> = []
+  for (let i = 0; i < teamIds.length; i++) {
+    for (let j = i + 1; j < teamIds.length; j++) {
+      allPairs.push([teamIds[i], teamIds[j]])
+    }
   }
-  
-  // Nombre de matchs par créneau
-  const matchesInSlot: number[] = new Array(numberOfSlots).fill(0)
-
-  // Fonction utilitaire pour générer une clé unique pour un match
-  const matchKey = (t1: string, t2: string): string => {
-    return t1 < t2 ? `${t1}-${t2}` : `${t2}-${t1}`
+  const pairKey = (a: string, b: string) => (a < b ? `${a}-${b}` : `${b}-${a}`)
+  const maxAttempts = 2000
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    shuffleArray(allPairs)
+    const count: Record<string, number> = {}
+    teamIds.forEach((id) => { count[id] = 0 })
+    const chosen: Array<[string, string]> = []
+    const used = new Set<string>()
+    for (const [t1, t2] of allPairs) {
+      if (chosen.length >= totalMatches) break
+      if (count[t1]! >= matchesPerTeam || count[t2]! >= matchesPerTeam) continue
+      const key = pairKey(t1, t2)
+      if (used.has(key)) continue
+      used.add(key)
+      chosen.push([t1, t2])
+      count[t1]!++
+      count[t2]!++
+    }
+    if (chosen.length === totalMatches) return chosen
   }
+  return []
+}
 
-  // Fonction pour calculer le score de priorité d'un match
-  // Plus le score est bas, plus le match est prioritaire
-  const getMatchPriority = (t1: string, t2: string): number => {
-    const count1 = matchCount[t1] || 0
-    const count2 = matchCount[t2] || 0
-    
-    // Priorité aux équipes qui n'ont pas encore atteint leur quota
-    const underQuota1 = count1 < matchesPerTeam ? 0 : 100
-    const underQuota2 = count2 < matchesPerTeam ? 0 : 100
-    
-    // Score combiné : favorise les équipes qui ont le moins joué
-    return underQuota1 + underQuota2 + count1 + count2
-  }
+/**
+ * Assigne chaque paire à un créneau et un numéro de table, sans qu'une équipe joue deux fois au même créneau.
+ */
+function assignMatchesToSlots(
+  pairs: Array<[string, string]>,
+  maxMatchesPerSlot: number
+): Array<{ team1Id: string; team2Id: string; slot: number; tableNumber: number }> {
+  const teamsInSlot: Record<number, Set<string>> = {}
+  const matchesInSlot: Record<number, number> = {}
 
-  // Remplir chaque créneau en maximisant l'utilisation des tables
-  for (let slot = 0; slot < numberOfSlots; slot++) {
-    // Continuer tant qu'on peut ajouter des matchs dans ce créneau
-    let canAddMore = true
-    
-    while (canAddMore && matchesInSlot[slot] < maxMatchesPerSlot) {
-      canAddMore = false
-      
-      // Trouver le meilleur match disponible pour ce créneau
-      let bestMatch: [string, string] | null = null
-      let bestPriority = Infinity
-      
-      for (const [t1, t2] of possibleMatches) {
-        const key = matchKey(t1, t2)
-        
-        // Vérifier que le match n'est pas déjà utilisé
-        if (usedMatches.has(key)) continue
-        
-        // Vérifier que les deux équipes sont disponibles dans ce créneau
-        if (busyTeamsBySlot[slot].has(t1) || busyTeamsBySlot[slot].has(t2)) continue
-        
-        // Calculer la priorité de ce match
-        const priority = getMatchPriority(t1, t2)
-        
-        if (priority < bestPriority) {
-          bestPriority = priority
-          bestMatch = [t1, t2]
-        }
+  const result: Array<{ team1Id: string; team2Id: string; slot: number; tableNumber: number }> = []
+
+  for (const [t1, t2] of pairs) {
+    let slot = 0
+    while (true) {
+      if (!teamsInSlot[slot]) {
+        teamsInSlot[slot] = new Set()
+        matchesInSlot[slot] = 0
       }
-      
-      // Si on a trouvé un match, l'ajouter
-      if (bestMatch) {
-        const [t1, t2] = bestMatch
-        const key = matchKey(t1, t2)
-        
-        schedule.push({ team1Id: t1, team2Id: t2, slot })
-        usedMatches.add(key)
-        busyTeamsBySlot[slot].add(t1)
-        busyTeamsBySlot[slot].add(t2)
-        matchCount[t1]++
-        matchCount[t2]++
-        matchesInSlot[slot]++
-        canAddMore = true
+      const count = matchesInSlot[slot]
+      const busy = teamsInSlot[slot]
+      if (count < maxMatchesPerSlot && !busy.has(t1) && !busy.has(t2)) {
+        matchesInSlot[slot] = count + 1
+        busy.add(t1)
+        busy.add(t2)
+        const tableNumber = count + 1
+        result.push({ team1Id: t1, team2Id: t2, slot, tableNumber })
+        break
       }
+      slot++
     }
   }
 
-  // Deuxième passe : si des créneaux ne sont pas remplis et qu'il reste des matchs possibles,
-  // essayer d'ajouter des matchs supplémentaires (même si les équipes ont déjà leur quota)
-  // Cela garantit une utilisation maximale des tables
-  for (let slot = 0; slot < numberOfSlots; slot++) {
-    while (matchesInSlot[slot] < maxMatchesPerSlot) {
-      let added = false
-      let bestMatch: [string, string] | null = null
-      let bestPriority = Infinity
-      
-      for (const [t1, t2] of possibleMatches) {
-        const key = matchKey(t1, t2)
-        if (usedMatches.has(key)) continue
-        if (busyTeamsBySlot[slot].has(t1) || busyTeamsBySlot[slot].has(t2)) continue
-        
-        // Priorité aux équipes qui ont le moins joué
-        const priority = (matchCount[t1] || 0) + (matchCount[t2] || 0)
-        if (priority < bestPriority) {
-          bestPriority = priority
-          bestMatch = [t1, t2]
-        }
-      }
-      
-      if (bestMatch) {
-        const [t1, t2] = bestMatch
-        const key = matchKey(t1, t2)
-        
-        schedule.push({ team1Id: t1, team2Id: t2, slot })
-        usedMatches.add(key)
-        busyTeamsBySlot[slot].add(t1)
-        busyTeamsBySlot[slot].add(t2)
-        matchCount[t1]++
-        matchCount[t2]++
-        matchesInSlot[slot]++
-        added = true
-      }
-
-      if (!added) break
-    }
-  }
-
-  // Troisième passe : s'il reste des équipes qui n'ont pas assez joué,
-  // ajouter des créneaux supplémentaires si nécessaire
-  const teamsNeedingMatches = teamIds.filter(id => matchCount[id] < matchesPerTeam)
-  
-  if (teamsNeedingMatches.length > 0) {
-    let extraSlot = numberOfSlots
-    let attempts = 0
-    const maxExtraSlots = 10 // Limite de sécurité
-    
-    while (teamsNeedingMatches.some(id => matchCount[id] < matchesPerTeam) && attempts < maxExtraSlots) {
-      busyTeamsBySlot.push(new Set())
-      matchesInSlot.push(0)
-      
-      let addedInSlot = false
-      
-      while (matchesInSlot[extraSlot] < maxMatchesPerSlot) {
-        let bestMatch: [string, string] | null = null
-        let bestPriority = Infinity
-        
-        for (const [t1, t2] of possibleMatches) {
-          const key = matchKey(t1, t2)
-          if (usedMatches.has(key)) continue
-          if (busyTeamsBySlot[extraSlot].has(t1) || busyTeamsBySlot[extraSlot].has(t2)) continue
-          
-          // Forte priorité aux équipes qui n'ont pas atteint leur quota
-          const need1 = matchCount[t1] < matchesPerTeam ? -1000 : 0
-          const need2 = matchCount[t2] < matchesPerTeam ? -1000 : 0
-          const priority = need1 + need2 + matchCount[t1] + matchCount[t2]
-          
-          if (priority < bestPriority) {
-            bestPriority = priority
-            bestMatch = [t1, t2]
-          }
-        }
-        
-        if (bestMatch) {
-          const [t1, t2] = bestMatch
-          const key = matchKey(t1, t2)
-          
-          schedule.push({ team1Id: t1, team2Id: t2, slot: extraSlot })
-          usedMatches.add(key)
-          busyTeamsBySlot[extraSlot].add(t1)
-          busyTeamsBySlot[extraSlot].add(t2)
-          matchCount[t1]++
-          matchCount[t2]++
-          matchesInSlot[extraSlot]++
-          addedInSlot = true
-        } else {
-          break
-        }
-      }
-      
-      if (!addedInSlot) break
-      
-      extraSlot++
-      attempts++
-    }
-  }
-
-  return schedule
+  return result
 }
 
 /**

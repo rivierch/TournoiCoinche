@@ -9,6 +9,8 @@
     "build": "tsc && vite build && electron-builder",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "electron:dev": "concurrently \"vite\" \"electron .\"",
     "electron:build": "vite build && electron-builder"
   },
